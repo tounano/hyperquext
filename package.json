@@ -1,0 +1,32 @@
+{
+  "name": "hyperquext",
+  "version": "0.0.1",
+  "main": "./hyperquext.js",
+  "description": "Extandable request module. Like hyperquest but extandable.",
+  "homepage": "https://github.com/tounano/hyperquext/",
+  "author": "ClickHere <js@clickhere.co.il>",
+  "keywords": [
+    "request",
+    "http",
+    "https",
+    "scraping",
+    "hyperquest"
+  ],
+  "licenses": {
+    "type": "The MIT License",
+    "url": "http://www.opensource.org/licenses/mit-license.php"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tounano/hyperquext"
+  },
+  "engines": {
+    "node": ">=0.6.11 <=0.7.0 || >=0.7.3"
+  },
+  "dependencies": {
+    "underscore": "latest",
+    "decorquest": "latest",
+    "through": "latest",
+    "duplexer": "latest"
+  }
+}
