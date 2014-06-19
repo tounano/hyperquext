@@ -2,7 +2,7 @@
   "name": "hyperquext",
   "version": "0.0.1",
   "main": "./hyperquext.js",
-  "description": "Extandable request module. Like hyperquest but extandable.",
+  "description": "Extendable request module. Like hyperquest but extendable.",
   "homepage": "https://github.com/tounano/hyperquext/",
   "author": "ClickHere <js@clickhere.co.il>",
   "keywords": [
