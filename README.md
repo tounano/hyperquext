@@ -63,7 +63,7 @@ be merged on to the `opts` object.
 
 Additional options:
 
-*  Any options that is accepted by `http.request` and 'https.request` like `agent`. The options object will be modified by
+*  Any options that is accepted by `http.request` and `https.request` like `agent`. The options object will be modified by
 extensions and passed down until it reaches `http.request` or `https.request`.
 *  Any options that are used by the decorators of `decorquest` or `hyperquext`.
 
