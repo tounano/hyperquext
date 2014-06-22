@@ -59,7 +59,7 @@ extension of the `url.parse` response object. In any case `url.parse` would be p
 be merged on to the `opts` object.
 *  `method` - (optional). Default method is `GET`.
 *  `headers` - (optional). The request headers you'd like to send. (Default: {}).
-*  `basequest` - (optional). An instance of [decorquest](https://github.com/tounano/decorquest). (Default: `dq.attachAuthorizationHeader(dq.disableGlobalAgent(dq.request));`
+*  `basequest` - (optional). An instance of [decorquest](https://github.com/tounano/decorquest). (Default: `dq.attachAuthorizationHeader(dq.disableGlobalAgent(dq.request));`)
 
 Additional options:
 
@@ -96,7 +96,7 @@ The actual request would be performed on the next tick, so you can set some data
 
 ####events
 
-RequestProxy is a stream. It will have all the events that a stream would have. Such as `data`, `end` and 'close'.
+RequestProxy is a stream. It will have all the events that a stream would have. Such as `data`, `end` and `close`.
 
 It will also reemit all the events that would be emitted by the `ClientRequest` object [provided by Node](http://nodejs.org/api/http.html#http_class_http_clientrequest).
 
@@ -307,7 +307,7 @@ High-level decorators.
 As a rule of thumb, Low-level (`decorquest`) decorators should be preffered. Please look at the documentation of [decorquest](https://github.com/tounano/decorquest)
 to see how it should be done.
 
-The only case when you should prefer developing a Hig-level decorator is when the success of the request depends on the response,
+The only case when you should prefer developing a High-level decorator is when the success of the request depends on the response,
 such as the case of handling `3XX redirects` or introducing a feature where you retry the request if it fails.
 
 ###API
@@ -353,7 +353,7 @@ function passthroughDecorator(hyperquext) {
 
 ##Final words
 
-This module is under heavy development, and my hope is that other devs would be able to joing this project and together
+This module is under heavy development, and my hope is that other devs would be able to join this project and together
 we'll create the best `web scraping` platform out there.
 
 Special thanks to [substack](https://github.com/substack) for the big inspiration from his [hyperquest](https://github.com/substack/hyperquest)
@@ -364,7 +364,7 @@ module. If you don't need those fancy decorations it would be a better idea to u
 With [npm](https://npmjs.org) do:
 
 ```
-npm install recursor
+npm install hyperquext
 ```
 
 ## license
