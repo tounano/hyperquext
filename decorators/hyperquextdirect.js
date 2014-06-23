@@ -36,12 +36,15 @@ function hyperquextDirect(hyperquext) {
 
       var redirects = [];
 
-      req.on("redirect", function (res) {
+      req.on("redirect", onRedirect);
+      req.on("close", function () {req.removeListener("redirect", onRedirect)});
+
+      function onRedirect (res) {
         redirects.push({
           statusCode: res.statusCode,
           redirectUri: res.headers.location
         });
-      });
+      }
 
       reemit(req, proxy, ["socket", "connect", "upgrade", "continue", "redirect"]);
 
@@ -82,13 +85,17 @@ function hyperquextDirect(hyperquext) {
         cb(null, initialRequest);
       } else {
         initialRequest.emit("redirect", res);
+        initialRequest.destroy();
+        initialRequest.ws.destroy();
+        initialRequest.rs.destroy();
         var opts = _.clone(initialRequest.reqopts);
         opts = _.extend(opts, url.parse(res.headers.location));
         opts.uri = res.headers.location;
 
         var req = hyperquext(opts);
-        req.rs.autoDestroy = false;
+        //req.rs.autoDestroy = false;
         req.on("redirect", function (res) {initialRequest.emit("redirect", res)});
+        req.on("close", function () {initialRequest.removeAllListeners("redirect")})
 
         keepRequesting(hyperquext, req, --maxRedirects, cb);
       }

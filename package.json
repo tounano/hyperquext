@@ -1,6 +1,6 @@
 {
   "name": "hyperquext",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "./hyperquext.js",
   "description": "Extendable request module. Like hyperquest but extendable.",
   "homepage": "https://github.com/tounano/hyperquext/",
