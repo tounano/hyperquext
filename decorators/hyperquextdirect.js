@@ -37,7 +37,7 @@ function hyperquextDirect(hyperquext) {
       var redirects = [];
 
       req.on("redirect", onRedirect);
-      req.on("close", function () {req.removeListener("redirect", onRedirect)});
+      proxy.on("close", function () {req.removeListener("redirect", onRedirect);});
 
       function onRedirect (res) {
         redirects.push({
@@ -95,7 +95,7 @@ function hyperquextDirect(hyperquext) {
         var req = hyperquext(opts);
         //req.rs.autoDestroy = false;
         req.on("redirect", function (res) {initialRequest.emit("redirect", res)});
-        req.on("close", function () {initialRequest.removeAllListeners("redirect")})
+        initialRequest.once("close", function () {process.nextTick(function () {initialRequest.removeAllListeners("redirect");})})
 
         keepRequesting(hyperquext, req, --maxRedirects, cb);
       }
