@@ -53,7 +53,7 @@ function hyperquextDirect(hyperquext) {
           err.reqopts = _.clone(proxy.reqopts);
           err.redirects = redirects;
           proxy.emit("error", err);
-          proxy.end();
+          proxy.rs.end();
           process.nextTick( function () {
             req.destroy();
           })
