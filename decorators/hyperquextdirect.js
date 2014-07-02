@@ -45,9 +45,11 @@ function hyperquextDirect(hyperquext) {
           redirectUri: res.headers.location
         });
       }
-
+      var failed = false;
       keepRequesting(hyperquext, req, opts.maxRedirects, function (err, req) {
+        if (failed) return;
         if (err) {
+          failed = true;
           err.reqopts = _.clone(proxy.reqopts);
           err.redirects = redirects;
           proxy.emit("error", err);
@@ -106,7 +108,6 @@ function hyperquextDirect(hyperquext) {
           opts.uri = res.headers.location;
 
           var req = hyperquext(opts);
-          proxy.emit('request', req);
 
           keepRequesting(hyperquext, req, --maxRedirects, cb);
         }
