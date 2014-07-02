@@ -85,25 +85,31 @@ Or stream additional data (like POST data) towards that stream.
 
 The actual request would be performed on the next tick, so you can set some data outside of `opts` using it's methods.
 
+RequestProxy is a wrapper for `ClientRequest` objects, which are the default return values of Node's `http.request()`.
+
 ####methods
 
 *  `req.setHeader(key, value)` - set an outgoing header.
 *  `req.setLocation(uri)` - change the uri.
 *  `req.abort()` - abort the request and destroy it's related streams.
-*  `req.setTimeout(timeout, [cb])` - Once a socket is assigned to this request and is connected socket.setTimeout() will be called.
-*  `req.setNoDelay([nodelay])` - Once a socket is assigned to this request and is connected socket.setNoDelay() will be called.
-*  `req.setSocketKeepAlive([enable],[initialDelay])` - Once a socket is assigned to this request and is connected socket.setKeepAlive() will be called.
+*  `req.setTimeout(timeout, [cb])` - Once a `ClientRequest` object is assigned clientRequest.setTimeout() will be called.
+*  `req.setNoDelay([nodelay])` - Once a `ClientRequest` object is assigned clientRequest.setNoDelay() will be called.
+*  `req.setSocketKeepAlive([enable],[initialDelay])` - Once a `ClientRequest` object is assigned clientRequest.setSocketKeepAlive() will be called.
 
 ####events
 
 RequestProxy is a stream. It will have all the events that a stream would have. Such as `data`, `end` and `close`.
 
-It will also reemit all the events that would be emitted by the `ClientRequest` object [provided by Node](http://nodejs.org/api/http.html#http_class_http_clientrequest).
+Additional events:
 
-As it sounds from it's name `RequestProxy` is only a proxy object, and doesn't have any functionality or logic. It will
-reemit everything that `hyperquext` or a `hyperquext extension` will tell it to emit.
+*  `request` - Each time a new request is being made, it will emit a `request` event with `ClientRequest` object as an argument.
+Several requests can be made by decorators. For example in the case of following redirects, it will perform a new request on each redirect.
+*  `finalRequest` - Once the final request has been performed, it will emit the `ClientRequest` object in a `finalRequest` event.
+This `ClientRequest` object will be emitted twice. Once in the `request` event, and once in `finalRequest` event.
+*  `response` - Will be emitted as in other request modules.
 
-Hence, each extension might introduce new `events`.
+In addition to that, each decorator might introduce new events. For example, `hyperquextDirect` will emit `redirect` event on
+every redirect.
 
 ####Response object
 
@@ -316,16 +322,12 @@ such as the case of handling `3XX redirects` or introducing a feature where you 
 
 This method would create a `RequestProxy` object that you can return immediately to the user.
 
-Keep in mind that RequestProxy is a duplex stream. It's `WriteStream` and `ReadStream` are located at `req.ws` and `req.rs`
+####Events you must emit
 
-*  `req.ws` - is paused on instantiation and you should call `req.ws.resume()` once you pipe it to the final `WriteStream`.
-*  `req.rs` - you should pipe the final `ReadStream` to `req.rs`.
-
-####hyperquext.helpers.reemit(source, dest, events)
-
-A helper method to reemit events from the intermeditate RequestProxy to the final RequestProxy.
-
-`events` is an array of event names to reemit.
+*  `request` - Each time you make a sequential request, you have to emit the `ClientRequest` object as soon as possible.
+You emit this object, before anything else you do. Emitting this object, as soon as possible will ensure safe cleanup, along
+with proper functioning upon termination.
+*  `finalRequest` - You must emit a `ClienRequest` object, once you that you won't have any sequential requests.
 
 ####hyperquext.helpers.bindMethod(method, hyperquext)
 
@@ -338,8 +340,14 @@ var hyperquext = require("hyperquext");
 
 function passthroughDecorator(hyperquext) {
   function decorator (uri, opts, cb) {
+    var proxy = hyperquext.createProxy();
     // Just call hyperquext
-    return hyperquext(uri, opts, cb);
+    var hq = hyperquext(uri, opts, cb);
+
+    hq.on('request', function (clientRequest) {proxy.emit('request', clientRequest);});
+    hq.on('finalRequest', function (clientRequest) {proxy.emit('finalRequest', clientRequest);});
+
+    return proxy;
   }
 
   decorator["get"] = bindMethod("GET", decorator);
@@ -359,12 +367,35 @@ we'll create the best `web scraping` platform out there.
 Special thanks to [substack](https://github.com/substack) for the big inspiration from his [hyperquest](https://github.com/substack/hyperquest)
 module. If you don't need those fancy decorations it would be a better idea to use [hyperquest](https://github.com/substack/hyperquest).
 
+##Important Note
+
+Please follow [hyperquext](https://github.com/tounano/hyperquext) on github to get notified on API changes.
+
+In any case, make sure to specify a version in `package.json`, so that if an API change were introduced your app won't
+collapse.
+
+The following practice is highly recommended:
+
+```
+...
+  depndencies: [
+    "hyperquext": "0.1.*"
+  ]
+...
+```
+
+##Changelog
+
+*  `v0.1.0` - Hyperquext was rewritten and it changed it's architecture completely. Lot's of the logic moved to
+ `RequestProxy` object, and from now on it won't reemit events from `ClientRequest` objects. Unless those events
+ are request oriented like `response` or `error`.
+
 ## install
 
 With [npm](https://npmjs.org) do:
 
 ```
-npm install hyperquext
+npm install hyperquext@0.1.*
 ```
 
 ## license

@@ -1,7 +1,7 @@
 var _ = require("underscore");
 var dq = require("decorquest");
-var createRequestProxy = require("./lib/request-proxy");
 var basequest = dq.attachAuthorizationHeader(dq.disableGlobalAgent(dq.request));
+var createRequestProxy = require("./lib/request-proxy");
 var reemit = require("./lib/helpers").reemit;
 var bindMethod = require("./lib/helpers").bindMethod;
 var url = require("url");
@@ -54,49 +54,23 @@ function doRequest(opts, request) {
   request = request || basequest;
   var req = createRequestProxy(opts);
 
-  var method = req.reqopts.method;
-  var isDuplex = !(method === 'GET' || method === 'DELETE'
-    || method === 'HEAD');
-
-  var closed = false;
-  req.on("close", function () {closed=true});
-
-  if (!isDuplex) { req.rs.writable = false; req.ws.writable = false; }
-
   process.nextTick( function () {
-
     var r;
     try {
       r = request(req.reqopts);
+      req.emit('request', r);
+      req.emit('finalRequest', r)
+
+      r.on('error', function (err) {
+        req.emit('error', err);
+      });
+
+      if (!req.isDuplex) r.end();
+
     } catch (err) {
       req.emit("error", err);
       return;
     }
-    req.on("close", function () {
-      r.destroy();
-    })
-
-    reemit(r, req, ["socket", "connect", "upgrade", "continue", "error"]);
-    r.on("response", function (res) {
-      res.request = _.extend(res.request || {}, _.clone(req.reqopts));
-      req.emit("response", res);
-
-      if (isDuplex) res.pipe(req.rs);
-      else {
-        res.on("data", function (buf) {req.rs.queue(buf)});
-        res.on("end", function () {
-          req.rs.queue(null); req.ws.queue(null); });
-      }
-    })
-
-    process.nextTick( function () {
-      req.emit("sent");
-      if (isDuplex) {
-        req.ws.pipe(r);
-        req.ws.resume();
-      }
-      else r.end();
-    })
   }.bind(this));
 
   return req;

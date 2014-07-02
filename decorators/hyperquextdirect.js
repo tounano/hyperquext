@@ -36,8 +36,8 @@ function hyperquextDirect(hyperquext) {
 
       var redirects = [];
 
-      req.on("redirect", onRedirect);
-      proxy.on("close", function () {req.removeListener("redirect", onRedirect);});
+      proxy.on("redirect", onRedirect);
+      proxy.on("close", function () {proxy.removeListener("redirect", onRedirect);});
 
       function onRedirect (res) {
         redirects.push({
@@ -46,60 +46,72 @@ function hyperquextDirect(hyperquext) {
         });
       }
 
-      reemit(req, proxy, ["socket", "connect", "upgrade", "continue", "redirect"]);
-
       keepRequesting(hyperquext, req, opts.maxRedirects, function (err, req) {
         if (err) {
           err.reqopts = _.clone(proxy.reqopts);
           err.redirects = redirects;
           proxy.emit("error", err);
-          proxy.rs.end();
-          process.nextTick( function () {
-            req.destroy();
-          })
 
           return;
         }
 
-        if (req.res) {
-          req.res.request.redirects = redirects;
-          proxy.emit("response", req.res);
-        } else req.on("response", function (res) {
-          req.res.request.redirects = redirects;
-          proxy.emit("response", res);
-        });
+        if (req.finalRequest) {
+          emitFinalRequest(req.finalRequest);
+        } else {
+          req.once('finalRequest', function (finalRequest) {
+            emitFinalRequest(finalRequest);
+          });
+        }
 
-        req.on("data", function (buf) {proxy.rs.queue(buf)});
-        req.on("end", function () {proxy.rs.queue(null);proxy.ws.queue(null);});
+        function emitFinalRequest(finalRequest) {
+          if (finalRequest.res) {
+            attachRedirectsToResponse(finalRequest.res);
+          } else {
+            finalRequest.once('response', function (res) {
+              attachRedirectsToResponse(res);
+            });
+          }
+
+          proxy.emit('finalRequest', finalRequest);
+        }
+
+        function attachRedirectsToResponse(res) {
+          res.request = res.request || {};
+          res.request.redirects = res.request.redirects || [];
+          res.request.redirects = _.union(res.request.redirects, redirects);
+        }
       });
+
 
       return proxy;
     }
-  }
 
-  function keepRequesting(hyperquext, initialRequest, maxRedirects, cb) {
-    initialRequest.on("error", function(err) {cb(err, initialRequest)});
-    if (maxRedirects <= 0) { return cb(null, initialRequest); }
-    initialRequest.on("response", function (res) {
-      if (!(isRedirect(res.statusCode))) {
-        cb(null, initialRequest);
-      } else {
-        initialRequest.emit("redirect", res);
-        initialRequest.destroy();
-        initialRequest.ws.destroy();
-        initialRequest.rs.destroy();
-        var opts = _.clone(initialRequest.reqopts);
-        opts = _.extend(opts, url.parse(res.headers.location));
-        opts.uri = res.headers.location;
+    function keepRequesting(hyperquext, initialRequest, maxRedirects, cb) {
+      initialRequest.on('error', function requestErrorListener(err) {
+        return cb(err, initialRequest);
+      });
+      initialRequest.on('request', function (request) {
+        proxy.emit('request', request);
+      });
+      if (maxRedirects <= 0) { return cb(new Error('max redirects'), initialRequest); };
 
-        var req = hyperquext(opts);
-        //req.rs.autoDestroy = false;
-        req.on("redirect", function (res) {initialRequest.emit("redirect", res)});
-        initialRequest.once("close", function () {process.nextTick(function () {initialRequest.removeAllListeners("redirect");})})
+      initialRequest.on("response", function (res) {
+        if (!(isRedirect(res.statusCode))) {
+          cb(null, initialRequest);
+        } else {
+          proxy.emit("redirect", res);
 
-        keepRequesting(hyperquext, req, --maxRedirects, cb);
-      }
-    });
+          var opts = _.clone(initialRequest.reqopts);
+          opts = _.extend(opts, url.parse(res.headers.location));
+          opts.uri = res.headers.location;
+
+          var req = hyperquext(opts);
+          proxy.emit('request', req);
+
+          keepRequesting(hyperquext, req, --maxRedirects, cb);
+        }
+      });
+    }
   }
 
   function isRedirect(statusCode) {
