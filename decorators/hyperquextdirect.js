@@ -104,8 +104,11 @@ function hyperquextDirect(hyperquext) {
           proxy.emit("redirect", res);
 
           var opts = _.clone(initialRequest.reqopts);
-          opts = _.extend(opts, url.parse(res.headers.location));
-          opts.uri = res.headers.location;
+          var location = res.headers.location;
+          if (location.search('://') === -1) location = url.resolve(opts.uri, res.headers.location);
+
+          opts = _.extend(opts, url.parse(location));
+          opts.uri = location;
 
           var req = hyperquext(opts);
 
