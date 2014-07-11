@@ -91,7 +91,7 @@ function attachBodyToResponse(hyperquext) {
 
     getFinalRequestFromHyperquext(req, function (err, finalRequest) {
       getResponseFromClientRequest(finalRequest, function (err, res) {
-        if (res.body) return;
+        if (res.body) return proxy.emit('finalRequest', finalRequest);
         var stream = require('through')().pause();
         stream.body = '';
 
