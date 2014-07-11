@@ -56,8 +56,6 @@ function redirector(hyperquext) {
 
 function parseArgs(hyperquext) {
   return function (uri, opts, cb) {
-    if (uri && opts && cb) return hyperquext(uri, opts, cb);
-
     if (typeof uri === 'object') {
       cb = opts;
       opts = uri;
