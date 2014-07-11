@@ -316,18 +316,34 @@ to see how it should be done.
 The only case when you should prefer developing a High-level decorator is when the success of the request depends on the response,
 such as the case of handling `3XX redirects` or introducing a feature where you retry the request if it fails.
 
-###API
+###Helpers API
 
 ####hyperquext.createRequestProxy()
 
 This method would create a `RequestProxy` object that you can return immediately to the user.
 
-####Events you must emit
+**Events you must emit**
 
 *  `request` - Each time you make a sequential request, you have to emit the `ClientRequest` object as soon as possible.
 You emit this object, before anything else you do. Emitting this object, as soon as possible will ensure safe cleanup, along
 with proper functioning upon termination.
 *  `finalRequest` - You must emit a `ClienRequest` object, once you that you won't have any sequential requests.
+
+####hyperquext.helpers.getFinalRequestFromHyperquext(req, cb)
+
+`finalRequest` can be retrieved by listening to a `finalRequest` event or by accessing `req.finalRequest` in case `finalRequest`
+was already emitted.
+
+`cb` is a callback accepts 2 args. `(err, finalRequest)`. `err` will be always null, this structure is made just to follow
+Node's standards.
+
+####hyperquext.helpers.getResponseFromClientRequest(clientRequest, cb)
+
+`response` can be retrieved by listening to a `response` event or by accessing `clientRequest.res` in case `response`
+was already emitted.
+
+`cb` is a callback accepts 2 args. `(err, res)`. `err` will be always null, this structure is made just to follow
+Node's standards.
 
 ####hyperquext.helpers.bindMethod(method, hyperquext)
 
@@ -359,6 +375,114 @@ function passthroughDecorator(hyperquext) {
 }
 ```
 
+###Devcorators API
+
+In version `0.2.0` devcorators were introduced. The idea behind devcorators is simply DRY. Devcorators are helpers
+that take care of common tasks such as parsing the arguments.
+
+####hyperquext.devcorators.parseArgs(hyperquext)
+
+If you're going to develop a decorator, you don't need to parse args anymore. Simply use this devcorator.
+
+**Example:**
+
+```js
+// A passthrough decorator
+function passthroughDecorator(hyperquext) {
+  // The state of the decorator comes here.
+  // Note that I'm wrapping my decorator using a devcorator.
+  return parseArgs(function (uri, opts, cb){
+    return hyperquext(uri, opts, cb);
+  });
+}
+```
+
+####hyperquext.devcorators.attachBodyToResponse(hyperquext)
+
+This decorator streams the `response` into a string that would be located at `res.body`. `res` and the `RequestProxy`
+would remain streamable as usual.
+
+This operation is "expensive", however sometimes it's mandatory. Use it only when you really need it.
+
+The option it listens to is `{body: true}`
+
+**Example:**
+
+```js
+attachBodyToResponse(hyperquext)('http://www.google.com',{body: true},function (err, res) {
+  console.log(res.body);
+});
+```
+
+####hyperquext.devcorators.consumeForcedOption(hyperquext, option)
+
+Let's you're developing a decorator that must use the `attachBodyToResponse`. In order to do it, you have to specify
+`{body: true} in options. The user however, didn't specified it in options.
+
+In that case, we can manually change the option in the decorator. The problem is that we don't know how the consumer
+of our decorator uses the `response` object. So it's not a good idea to load stuff that the user didn't ask for. It's a
+safe way to memory-leak hell.
+
+What this devcorator does, is to take care of this stuff. It'll add an option and will delete it after consumption. If
+the option was introduced before by the user or other decorator, it will act as a passthrough.
+
+**Example:**
+
+```js
+function someDecorator(hyperquext){
+  return parseArgs(uri, opts, cb) {
+    // Some logic here...
+
+    var req = consumeForcedOption(attachBodyToResponse(hyperquext), 'body')(uri, opts, cb);
+
+    getFinalRequestFromHyperquext(req, function (err, finalRequest) {
+      getResponseFromClientRequest(finalRequest, function (err, res) {
+        // Some logic related to res.body here
+      })
+    })
+
+    return req;
+  }
+}
+```
+
+####hyperquext.devcorators.redirector(hyperquext)
+
+There are several use-cases of redirection. It can be on the most common scenarios like 3XX status codes, or it might be
+on a less common scenarios such as `Meta Refresh Redirect`.
+
+`redirector` provides a framework for following redirects. It triggered by `opts.maxRedirects` and `response['$redirect'].
+
+In order to instruct `redirector` to redirect to some other url, you have to attach `$redirect` property to the response
+object. The `$redirect` property must consist of:
+
+*  `statusCode` - the reason for redirection.
+*  `redirectUri` - the URL to redirect to.
+
+**Example: hyperquextDirect**
+
+```js
+function hyperquextDirect(hyperquext) {
+  return redirector(parseArgs(function (uri, opts, cb) {
+    var req = hyperquext(uri, opts, cb);
+    if (req.reqopts.method !== 'GET' || !(opts.maxRedirects)) return req;
+
+    getFinalRequestFromHyperquext(req, function (err, finalRequest) {
+      getResponseFromClientRequest(finalRequest, function (err, res) {
+        if (parseInt(res.statusCode) >= 300 && parseInt(res.statusCode) < 400) {
+          finalRequest.res['$redirect'] = {
+            statusCode: res.statusCode,
+            redirectUri: url.resolve(opts.uri, res.headers.location)
+          }
+        }
+      })
+    })
+
+    return req;
+  }));
+}
+```
+
 ##Final words
 
 This module is under heavy development, and my hope is that other devs would be able to join this project and together
@@ -379,23 +503,33 @@ The following practice is highly recommended:
 ```
 ...
   depndencies: [
-    "hyperquext": "0.1.*"
+    "hyperquext": "0.2.*"
   ]
 ...
 ```
 
 ##Changelog
 
-*  `v0.1.0` - Hyperquext was rewritten and it changed it's architecture completely. Lot's of the logic moved to
- `RequestProxy` object, and from now on it won't reemit events from `ClientRequest` objects. Unless those events
- are request oriented like `response` or `error`.
+### 0.2.0
+
+*  Improved the architecture, the API wasn't changed.
+*  Introduced `devcorators`, decorators that are useful for developing other decorators.
+*  Added `redirector` devcorator. An abstract decorator that helps building decorators that follow redirects.
+*  `hyperquextDirect` is now more efficient and is based on `redirector`
+
+### 0.1.0
+
+*  Hyperquext's architecture was rewritten and it's api changed completely.
+*  Stopped reemiting events that arrive from `ClientRequest` objects. Emitting the `ClientRequest` object itself.
+*  The only events that are still reemitted are `error` and `response`.
+*  Introduced the `finalRequest` event. This event emits the final `ClientRequest` in the current request chain.
 
 ## install
 
 With [npm](https://npmjs.org) do:
 
 ```
-npm install hyperquext@0.1.*
+npm install hyperquext@0.2.*
 ```
 
 ## license

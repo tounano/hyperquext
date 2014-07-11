@@ -22,7 +22,8 @@ exported = _.extend(exported,{
   createRequestProxy: require("./lib/request-proxy"),
   decorators: {
     hyperquextDirect: require("./decorators/hyperquextdirect")
-  }
+  },
+  devcorators: require('./decorators/devcorators')
 });
 
 function hyperquext(uri, opts, cb) {
