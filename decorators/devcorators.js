@@ -13,12 +13,10 @@ module.exports = {
 
 function redirector(hyperquext) {
   return parseArgs(function (uri, opts, cb) {
-    var req = hyperquext(uri, opts);
+    if (opts['$redirector'] || !opts.maxRedirects || (opts.method && opts.method.toUpperCase() !== 'GET'))
+      return hyperquext(uri, opts, cb);
 
-    if (req.reqopts.method !== 'GET' || !(opts.maxRedirects)) {
-      req.setCallback(cb);
-      return req;
-    }
+    var req = hyperquext(uri, _.extend(opts, {'$redirecotr': true}));
     var proxy = hq.createRequestProxy(opts, cb);
     var redirects = [];
     proxy.on('redirect', onRedirect); function onRedirect(res) {redirects.push(res['$redirect'])};
@@ -38,7 +36,7 @@ function redirector(hyperquext) {
             var redirecting = hyperquext(opts.uri, opts);
             proxy.emit('redirect', res);
             redirecting.on('redirect', onRedirect); function onRedirect(res) {proxy.emit('redirect',res)};
-            redirecting.on('close', function () {redirecting.removeListener('redirect', onRedirect)});
+            redirecting.on('close', function () {redirecting.removeListener('redirect', onRedirect);});
             return handleRedirects(redirecting);
           }
 
@@ -91,7 +89,7 @@ function attachBodyToResponse(hyperquext) {
 
     getFinalRequestFromHyperquext(req, function (err, finalRequest) {
       getResponseFromClientRequest(finalRequest, function (err, res) {
-        if (res.body) return proxy.emit('finalRequest', finalRequest);
+        if (res.body || res.statusCode != 200) return proxy.emit('finalRequest', finalRequest);
         var stream = require('through')().pause();
         stream.body = '';
 
