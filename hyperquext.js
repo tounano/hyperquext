@@ -62,9 +62,9 @@ function doRequest(opts, request) {
       req.emit('request', r);
       req.emit('finalRequest', r)
 
-      r.on('error', function (err) {
+      /*r.on('error', function (err) {
         req.emit('error', err);
-      });
+      });*/
 
       if (!req.isDuplex) r.end();
 
