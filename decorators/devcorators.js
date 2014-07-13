@@ -16,7 +16,7 @@ function redirector(hyperquext) {
     if (opts['$redirector'] || !opts.maxRedirects || (opts.method && opts.method.toUpperCase() !== 'GET'))
       return hyperquext(uri, opts, cb);
 
-    var req = hyperquext(uri, _.extend(opts, {'$redirecotr': true}));
+    var req = hyperquext(uri, _.extend(opts, {'$redirector': true}));
     var proxy = hq.createRequestProxy(opts, cb);
     var redirects = [];
     proxy.on('redirect', onRedirect); function onRedirect(res) {redirects.push(res['$redirect'])};
