@@ -31,7 +31,7 @@ function redirector(hyperquext) {
           if (res['$redirect']) {
             req.abort();
             req.destroy();
-            var opts = _.extend({}, req.reqopts, {uri: res['$redirect'].redirectUri, maxRedirects: req.reqopts.maxRedirects-1});
+            var opts = _.extend({}, req.reqopts, {uri: res['$redirect'].redirectUri, maxRedirects: req.reqopts.maxRedirects-1, '$redirector': true});
             if (opts.maxRedirects <= 0){ return proxy.emit('error', _.extend(new Error('max redirects'), {reqopts: _.clone(proxy.reqopts), redirects: redirects}));}
             var redirecting = hyperquext(opts.uri, opts);
             proxy.emit('redirect', res);
