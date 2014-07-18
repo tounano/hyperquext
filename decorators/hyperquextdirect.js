@@ -15,7 +15,7 @@ function hyperquextDirect(hyperquext) {
 
     getFinalRequestFromHyperquext(req, function (err, finalRequest) {
       getResponseFromClientRequest(finalRequest, function (err, res) {
-        if (parseInt(res.statusCode) >= 300 && parseInt(res.statusCode) < 400) {
+        if (parseInt(res.statusCode) >= 300 && parseInt(res.statusCode) < 400 && res.headers && res.headers.location) {
           finalRequest.res['$redirect'] = {
             statusCode: res.statusCode,
             redirectUri: url.resolve(opts.uri, res.headers.location)
